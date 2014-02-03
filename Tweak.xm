@@ -20,6 +20,7 @@ typedef BOOL(^CYCViewSearchCriterionValidator)(UIView *view, NSObject *criterion
 
 @interface cyc : NSObject
 // scraping for views
++(NSArray *)subviewsOfView:(UIView *)view kindOfClassForName:(NSString *)classToTest;
 +(NSArray *)subviewsOfView:(UIView *)view exactClassName:(NSString *)className;
 +(NSArray *)subviewsOfView:(UIView *)view withCriterion:(NSObject *)criterion matchingCriterionValidator:(CYCViewSearchCriterionValidator)validator;
 +(UIViewController*)viewControllerForView:(UIView*)view;
@@ -35,6 +36,19 @@ typedef BOOL(^CYCViewSearchCriterionValidator)(UIView *view, NSObject *criterion
 @end
 
 @implementation cyc
+
++(NSArray *)subviewsOfView:(UIView *)view kindOfClassForName:(NSString *)classToTest {
+	CYCViewSearchCriterionValidator validator = ^(UIView *view, NSObject *classToTest) {
+		Class theClass = NSClassFromString((NSString *)classToTest);
+		if ([view isKindOfClass:theClass]) {
+			return YES;
+		} else {
+			return NO;
+		}
+	};
+
+	return [cyc subviewsOfView:view withCriterion:classToTest matchingCriterionValidator:validator];
+}
 
 +(NSArray *)subviewsOfView:(UIView *)view exactClassName:(NSString *)className {
 	CYCViewSearchCriterionValidator validator = ^(UIView *view, NSObject *className) {
@@ -167,7 +181,12 @@ typedef BOOL(^CYCViewSearchCriterionValidator)(UIView *view, NSObject *criterion
 }
 
 +(id)respring {
-	[(SpringBoard *)[UIApplication sharedApplication] relaunchSpringBoard];
+	[cyc postLog:@"Respringing..."];
+	double delayInSeconds = 0.5;
+	dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+	dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+		[(SpringBoard *)[UIApplication sharedApplication] relaunchSpringBoard];
+	});
 	return @"respringing. you'll have to relaunch cycript";
 }
 
@@ -188,20 +207,24 @@ static cyc *dumbInstance = [[cyc alloc] init];
 		logWindow.backgroundColor = [UIColor clearColor];
 		logWindow.windowLevel = 27000;
 		logWindow.hidden = NO;
+		logWindow.userInteractionEnabled = NO;
 		
 		CGFloat screenWidth = [UIScreen mainScreen].bounds.size.width;
 		CGFloat screenHeight = [UIScreen mainScreen].bounds.size.height;
 		logContainer = [[UIView alloc] initWithFrame:CGRectMake(0, screenHeight, screenWidth, 142)];
+		logContainer.userInteractionEnabled = NO;
 		
 		logBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenWidth, 142)];
 		logBackground.backgroundColor = [UIColor blackColor];
 		logBackground.alpha = 0.7;
+		logBackground.userInteractionEnabled = NO;
 		
 		logLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, screenWidth - 10, 132)];
 		logLabel.textColor = [UIColor whiteColor];
 		logLabel.numberOfLines = 0;
 		logLabel.font = [UIFont systemFontOfSize:14];
 		logLabel.textAlignment = NSTextAlignmentCenter;
+		logLabel.userInteractionEnabled = NO;
 		
 		[logContainer addSubview:logBackground];
 		[logContainer addSubview:logLabel];

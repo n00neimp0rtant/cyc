@@ -1,6 +1,8 @@
 #import "UIImage+ImageEffects.h"
 #import "substrate.h"
 
+#define LOG_PANEL_HEIGHT 120
+
 // view snagging properties
 static UIView* snaggedView = nil;
 static BOOL snagBlock = NO;
@@ -116,6 +118,7 @@ typedef BOOL(^CYCViewSearchCriterionValidator)(UIView *view, NSObject *criterion
 }
 
 +(id)snagNextTouch {
+	snagBlock = !snagBlock;
 	snagNext = !snagNext;
 	return @"next touch will be eaten; access view that was tapped with [cyc snaggedView]";
 }
@@ -211,15 +214,15 @@ static cyc *dumbInstance = [[cyc alloc] init];
 		
 		CGFloat screenWidth = [UIScreen mainScreen].bounds.size.width;
 		CGFloat screenHeight = [UIScreen mainScreen].bounds.size.height;
-		logContainer = [[UIView alloc] initWithFrame:CGRectMake(0, screenHeight, screenWidth, 142)];
+		logContainer = [[UIView alloc] initWithFrame:CGRectMake(0, screenHeight, screenWidth, LOG_PANEL_HEIGHT)];
 		logContainer.userInteractionEnabled = NO;
 		
-		logBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenWidth, 142)];
+		logBackground = [[UIView alloc] initWithFrame:CGRectMake(0, 0, screenWidth, LOG_PANEL_HEIGHT)];
 		logBackground.backgroundColor = [UIColor blackColor];
 		logBackground.alpha = 0.7;
 		logBackground.userInteractionEnabled = NO;
 		
-		logLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, screenWidth - 10, 132)];
+		logLabel = [[UILabel alloc] initWithFrame:CGRectMake(5, 5, screenWidth - 10, LOG_PANEL_HEIGHT - 10)];
 		logLabel.textColor = [UIColor whiteColor];
 		logLabel.numberOfLines = 0;
 		logLabel.font = [UIFont systemFontOfSize:14];
@@ -231,7 +234,7 @@ static cyc *dumbInstance = [[cyc alloc] init];
 		[logWindow addSubview:logContainer];
 	}
 	[UIView animateWithDuration:0.3 animations:^{
-		logContainer.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height - 142, [UIScreen mainScreen].bounds.size.width, 142);
+		logContainer.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height - LOG_PANEL_HEIGHT, [UIScreen mainScreen].bounds.size.width, LOG_PANEL_HEIGHT);
 	}];
 	
 	return @"showing log panel";
@@ -239,7 +242,7 @@ static cyc *dumbInstance = [[cyc alloc] init];
 
 -(id)hideLog {
 	[UIView animateWithDuration:0.3 animations:^{
-		logContainer.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height, [UIScreen mainScreen].bounds.size.width, 142);
+		logContainer.frame = CGRectMake(0, [UIScreen mainScreen].bounds.size.height, [UIScreen mainScreen].bounds.size.width, LOG_PANEL_HEIGHT);
 	}];
 	
 	return @"showing log panel";
@@ -249,13 +252,51 @@ static cyc *dumbInstance = [[cyc alloc] init];
 	return logContainer;
 }
 
++(id)hooked {
+	return @"not hooked";
+}
+
 @end
 
-%hook SpringBoard
-- (id)init {
-	id orig = %orig;
-	
-	return orig;
+%hook cyc
++(id)hooked {
+	return @"hooked";
+}
+%end
+
+@interface SBApplication
+-(id)displayName;
+@end
+
+%hook SBApplication
+-(void)willActivate {
+	NSString *log = [NSString stringWithFormat:@"SBApplication -(void)willActivate\n[self displayName] = \"%@\"", [self displayName]];
+	[cyc postLog:log];
+	%orig;
+}
+
+-(void)didSuspend {
+	NSString *log = [NSString stringWithFormat:@"SBApplication -(void)didSuspend\n\n[self displayName] = \"%@\"", [self displayName]];
+	[cyc postLog:log];
+	%orig;
+}
+
+-(void)didExitWithInfo:(id)info type:(int)type {
+	NSString *log = [NSString stringWithFormat:@"SBApplication -(void)didExitWithInfo:%@ type:%i\n\n[self displayName] = \"%@\"", info, type, [self displayName]];
+	[cyc postLog:log];
+	%orig;
+}
+
+-(void)didLaunch:(id)launch {
+	NSString *log = [NSString stringWithFormat:@"SBApplication -(void)didLaunch\n\n[self displayName] = \"%@\"", [self displayName]];
+	[cyc postLog:log];
+	%orig;
+}
+
+-(void)didBeginLaunch:(id)launch {
+	NSString *log = [NSString stringWithFormat:@"SBApplication -(void)didBeginLaunch\n\n[self displayName] = \"%@\"", [self displayName]];
+	[cyc postLog:log];
+	%orig;
 }
 %end
 
@@ -275,3 +316,4 @@ static cyc *dumbInstance = [[cyc alloc] init];
 	}
 }
 %end
+

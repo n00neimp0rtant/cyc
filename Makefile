@@ -1,4 +1,4 @@
-TARGET = simulator:clang:7.0
+TARGET = simulator
 
 include theos/makefiles/common.mk
 
